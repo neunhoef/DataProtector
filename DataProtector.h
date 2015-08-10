@@ -57,14 +57,7 @@ class DataProtector {
     }
 
     UnUser use () {
-      int id = _mySlot;
-      if (id < 0) {
-        id = _last++;
-        if (_last > Nr) {
-          _last = 0;
-        }
-        _mySlot = id;
-      }
+      int id = getMyId();
       _list[id]._count++;   // this is implicitly using memory_order_seq_cst
       return UnUser(this, id);  // return value optimization!
     }
@@ -82,5 +75,18 @@ class DataProtector {
     void unUse (int id) {
       _list[id]._count--;   // this is implicitly using memory_order_seq_cst
     }
+
+    int getMyId () {
+      int id = _mySlot;
+      if (id < 0) {
+        id = _last++;
+        if (_last > Nr) {
+          _last = 0;
+        }
+        _mySlot = id;
+      }
+      return id;
+    }
+
 };
 
