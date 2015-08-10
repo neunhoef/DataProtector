@@ -417,13 +417,27 @@ quite fast.
 References
 ----------
 
-[Hazard pointer article][1] `http://www.research.ibm.com/people/m/michael/ieeetpds-2004.pdf`
-[Dr Dobbs][2] `http://www.drdobbs.com/lock-free-data-structures-with-hazard-po/184401890`
-[Memory orders in C++][3] `http://www.cplusplus.com/reference/atomic/memory_order/`
-[DataProtector implementation and test code][4] `https://github.com/neunhoef/DataProtector`
-[The multi-model NoSQL database ArangoDB][5] `https://www.arangodb.com`
-[Source code of ArangoDB on github][6] `https://github.com/ArangoDB/ArangoDB`
-[DataProtector in the ArangoDB source code][7] `https://github.com/ArangoDB/ArangoDB/blob/devel/lib/Basics/DataProtector.h`
+  - [Hazard pointer article][1] 
+  
+    `http://www.research.ibm.com/people/m/michael/ieeetpds-2004.pdf`
+  - [Dr Dobbs][2] 
+  
+    `http://www.drdobbs.com/lock-free-data-structures-with-hazard-po/184401890`
+  - [Memory orders in C++][3] 
+  
+    `http://www.cplusplus.com/reference/atomic/memory_order/`
+  - [DataProtector implementation and test code][4] 
+  
+    `https://github.com/neunhoef/DataProtector`
+  - [The multi-model NoSQL database ArangoDB][5] 
+  
+    `https://www.arangodb.com`
+  - [Source code of ArangoDB on github][6] 
+  
+    `https://github.com/ArangoDB/ArangoDB`
+  - [DataProtector in the ArangoDB source code][7] 
+  
+    `https://github.com/ArangoDB/ArangoDB/blob/devel/lib/Basics/DataProtector.h`
 
 [1]: http://www.research.ibm.com/people/m/michael/ieeetpds-2004.pdf
 [2]: http://www.drdobbs.com/lock-free-data-structures-with-hazard-po/184401890
