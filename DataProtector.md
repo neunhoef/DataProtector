@@ -141,10 +141,9 @@ of the `DataProtector` class, first `DataProtector.h`:
           delete[] _list;
         }
 
-        UnUser use () {
+        void use () {
           int id = getMyId();
           _list[id]._count++;   // this is implicitly using memory_order_seq_cst
-          return UnUser(this, id);  // return value optimization!
         }
 
         void unUse () {
