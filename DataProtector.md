@@ -369,7 +369,7 @@ reads per second and thread.
 Here are the results on an n1-standard-16 instance on Google Compute
 Engine (GCE) for various numbers of threads. The code has been compiled
 with `g++ -std=c++11 -O3 -Wall`. Results are in million reads per second
-(M/S) and million reads per second and thread (M/s/thread):
+(M/s), and million reads per second and thread (M/s/thread):
 
     |Nr |DataGuardian|unprotected|Mutex      |Spinlock   |DataProtector
     |Thr|  M/s  M/s/T|  M/S M/s/T|  M/S M/s/T|  M/S M/s/T|  M/S M/s/T 
