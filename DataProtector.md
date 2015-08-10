@@ -182,11 +182,14 @@ static thread-local variable:
     template<int Nr> thread_local int DataProtector<Nr>::_mySlot = -1;
     template class DataProtector<64>;
 
-A reader uses this as follows:
+In a multi-threaded application one would declare the following, either
+global or in some object intance:
 
     std::atomic<Data*> P;
     DataProtector Prot;
-    
+
+A reader uses this as follows:
+
     Prot.use();
     Data* Pcopy = P;   // uses memory_order_seq_cst by default
     // continue accessing data via Pcopy
@@ -265,9 +268,9 @@ this in the form of a small `UnUser` class, which is encapsulated in the
 The unuser instance will have type `DataProtector::UnUser` and the `use`
 method of the DataProtector returns the right instance such that the
 destructor of the `UnUser` class automagically calls the `unUse` method
-of the `DataProtector` class. This method can then in turn be
-`private`. Without further talking, here is the code of the `UnUser`
-class:
+of the `DataProtector` class, when the object goes out of scope. This
+method can then in turn be `private`. Without further talking, here is
+the code of the `UnUser` class:
 
     // A class to automatically unuse the DataProtector:
     class UnUser {
