@@ -1,7 +1,7 @@
 Lockfree protection of data structures that are frequently read
 ===============================================================
 
-by Max Neunhoeffer and Jan Steemann
+by Max Neunhoeffer
 
 
 Motivation
@@ -369,10 +369,11 @@ reads per second and thread.
 Here are the results on an n1-standard-16 instance on Google Compute
 Engine (GCE) for various numbers of threads. The code has been compiled
 with `g++ -std=c++11 -O3 -Wall`. Results are in million reads per second
-(M/S) and million reads per second and thread (M/(s*thread)):
+(M/S) and million reads per second and thread (M/s/thread):
 
     |Nr |DataGuardian|unprotected|Mutex      |Spinlock   |DataProtector
-    --------------------------------------------------------------
+    |Thr|  M/s  M/s/T|  M/S M/s/T|  M/S M/s/T|  M/S M/s/T|  M/S M/s/T 
+    -------------------------------------------------------------------
     | 1 | 34.0  34.06| 2259  2259|60.42 60.42|102.1 102.1| 84.3 84.35
     | 2 | 64.6  32.31| 4339  2169| 9.33  4.66| 97.5  48.7|160.1 80.05
     | 3 | 92.6  30.86| 6162  2054| 7.89  2.63| 93.5  31.1|234.3 78.12
@@ -396,8 +397,12 @@ with `g++ -std=c++11 -O3 -Wall`. Results are in million reads per second
     |48 |385.2   8.02|14202   295| 8.62  0.17| 81.0   1.6|488.4 10.17
     |64 |375.1   5.86|14196   221| 8.91  0.13| 79.2   1.2|508.3  7.94
 
-The results have some random variation and are very similar when using
-the `clang` compiler.
+The first column is the number of reader threads, in each of the five
+following columns there is first the total number of reads in all
+threads in millions per second and then the same number divided by the
+number of threads, which is the total number of reads per second and
+thread. The results have some random variation and are very similar when
+using the `clang` compiler.
 
 One can see that both the hazard pointers in the `DataGuardian` class
 and the `DataProtector` class scale well, until the number of actual 
@@ -412,12 +417,19 @@ quite fast.
 References
 ----------
 
-[1]: http://www.research.ibm.com/people/m/michael/ieeetpds-2004.pdf "Hazard pointer article"
-[2]: http://www.drdobbs.com/lock-free-data-structures-with-hazard-po/184401890 "Dr Dobbs"
-[3]: http://www.cplusplus.com/reference/atomic/memory_order/   "Memory orders in C++"
-[4]: https://github.com/neunhoef/DataProtector    "DataProtector implementation and test code"
-[5]: https://www.arangodb.com           "The multi-model NoSQL database ArangoDB"
-[6]: https://github.com/ArangoDB/ArangoDB   "Source code of ArangoDB on github"
-[7]: https://github.com/ArangoDB/ArangoDB/blob/devel/lib/Basics/DataProtector.h "DataProtector in the ArangoDB source code"
+[Hazard pointer article][1] `http://www.research.ibm.com/people/m/michael/ieeetpds-2004.pdf`
+[Dr Dobbs][2] `http://www.drdobbs.com/lock-free-data-structures-with-hazard-po/184401890`
+[Memory orders in C++][3] `http://www.cplusplus.com/reference/atomic/memory_order/`
+[DataProtector implementation and test code][4] `https://github.com/neunhoef/DataProtector`
+[The multi-model NoSQL database ArangoDB][5] `https://www.arangodb.com`
+[Source code of ArangoDB on github][6] `https://github.com/ArangoDB/ArangoDB`
+[DataProtector in the ArangoDB source code][7] `https://github.com/ArangoDB/ArangoDB/blob/devel/lib/Basics/DataProtector.h`
 
+[1]: http://www.research.ibm.com/people/m/michael/ieeetpds-2004.pdf
+[2]: http://www.drdobbs.com/lock-free-data-structures-with-hazard-po/184401890
+[3]: http://www.cplusplus.com/reference/atomic/memory_order/
+[4]: https://github.com/neunhoef/DataProtector
+[5]: https://www.arangodb.com
+[6]: https://github.com/ArangoDB/ArangoDB
+[7]: https://github.com/ArangoDB/ArangoDB/blob/devel/lib/Basics/DataProtector.h
 
