@@ -8,26 +8,21 @@
 
 #include <boost/atomic.hpp>
 
-class SpinLock
-{
-public:
-    void Acquire()
-    {
-        while (true)
-        {
-            if (!m_locked.test_and_set(boost::memory_order_acquire))
-            {
-                return;
-            }
-            usleep(250);
+class SpinLock {
+  public:
+    void Acquire() {
+      while (true) {
+        if (! m_locked.test_and_set(boost::memory_order_acquire)) {
+          return;
         }
+        usleep(250);
+      }
     }
-    void Release()
-    {
-        m_locked.clear(boost::memory_order_release);
+    void Release() {
+      m_locked.clear(boost::memory_order_release);
     }
 
-private:
+  private:
     boost::atomic_flag m_locked;
 };
 
@@ -36,22 +31,22 @@ private:
 
 using namespace std;
 
-struct Dingsbums {
-    Dingsbums(int i) : nr(i), isseganz(true) {
-    };
-    ~Dingsbums() {
-      isseganz = false;
-    }
-    int nr;
-    bool isseganz;
+struct DataToBeProtected {
+  DataToBeProtected(int i) : nr(i), isValid(true) {
+  }
+  ~DataToBeProtected() {
+    isValid = false;
+  }
+  int nr;
+  bool isValid;
 };
 
-Dingsbums const* unprotected = nullptr;
-DataGuardian<Dingsbums, maxN> guardian;
+DataToBeProtected const* unprotected = nullptr;
+DataGuardian<DataToBeProtected, maxN> guardian;
 
-atomic<Dingsbums*> geschuetzt(nullptr);
+atomic<DataToBeProtected*> pointerToData(nullptr);
 
-DataProtector<64> prot;
+DataProtector<64> protector;
 
 mutex mut;
 SpinLock spin;
@@ -61,18 +56,18 @@ uint64_t total = 0;
 atomic<uint64_t> nullptrsSeen;
 atomic<uint64_t> alarmsSeen;
 
-void reader_good (int id) {
+void reader_guardian (int id) {
   uint64_t count = 0;
   time_t start = time(nullptr);
   while (time(nullptr) < start + T) {
     for (int i = 0; i < 1000; i++) {
       count++;
-      Dingsbums const* p = guardian.lease(id);
+      DataToBeProtected const* p = guardian.lease(id);
       if (p == nullptr) {
         nullptrsSeen++;
       }
       else {
-        if (! p->isseganz) {
+        if (! p->isValid) {
           alarmsSeen++;
         }
       }
@@ -89,18 +84,16 @@ void reader_protector (int id) {
   while (time(nullptr) < start + T) {
     for (int i = 0; i < 1000; i++) {
       count++;
-      //int id = prot.use();
-      auto unuser(prot.use());
-      Dingsbums const* p = geschuetzt;
+      auto unuser(protector.use());
+      DataToBeProtected const* p = pointerToData;
       if (p == nullptr) {
         nullptrsSeen++;
       }
       else {
-        if (! p->isseganz) {
+        if (! p->isValid) {
           alarmsSeen++;
         }
       }
-      //prot.unUse(id);
     }
   }
   lock_guard<mutex> locker(mut);
@@ -113,12 +106,12 @@ void reader_unprotected (int) {
   while (time(nullptr) < start + T) {
     for (int i = 0; i < 1000; i++) {
       count++;
-      Dingsbums const* p = unprotected;
+      DataToBeProtected const* p = unprotected;
       if (p == nullptr) {
         nullptrsSeen++;
       }
       else {
-        if (! p->isseganz) {
+        if (! p->isValid) {
           alarmsSeen++;
         }
       }
@@ -135,12 +128,12 @@ void reader_mutex (int) {
     for (int i = 0; i < 1000; i++) {
       count++;
       lock_guard<mutex> locker(mut);
-      Dingsbums const* p = unprotected;
+      DataToBeProtected const* p = unprotected;
       if (p == nullptr) {
         nullptrsSeen++;
       }
       else {
-        if (! p->isseganz) {
+        if (! p->isValid) {
           alarmsSeen++;
         }
       }
@@ -157,12 +150,12 @@ void reader_spinlock (int) {
     for (int i = 0; i < 1000; i++) {
       count++;
       spin.Acquire();
-      Dingsbums const* p = unprotected;
+      DataToBeProtected const* p = unprotected;
       if (p == nullptr) {
         nullptrsSeen++;
       }
       else {
-        if (! p->isseganz) {
+        if (! p->isValid) {
           alarmsSeen++;
         }
       }
@@ -174,10 +167,10 @@ void reader_spinlock (int) {
 }
 
 
-void writer_good () {
-  Dingsbums* p;
+void writer_guardian () {
+  DataToBeProtected* p;
   for (int i = 0; i < T+2; i++) {
-    p = new Dingsbums(i);
+    p = new DataToBeProtected(i);
     guardian.exchange(p);
     usleep(1000000);
   }
@@ -185,27 +178,27 @@ void writer_good () {
 }
 
 void writer_protector () {
-  Dingsbums* p;
-  Dingsbums* q;
+  DataToBeProtected* p;
+  DataToBeProtected* q;
   for (int i = 0; i < T+2; i++) {
-    p = new Dingsbums(i);
-    q = geschuetzt;
-    geschuetzt = p;
-    prot.scan();
+    p = new DataToBeProtected(i);
+    q = pointerToData;
+    pointerToData = p;
+    protector.scan();
     delete q;
     usleep(1000000);
   }
-  q = geschuetzt;
-  geschuetzt = nullptr;
-  prot.scan();
+  q = pointerToData;
+  pointerToData = nullptr;
+  protector.scan();
   delete q;
 }
 
 void writer_unprotected () {
-  Dingsbums* p;
+  DataToBeProtected* p;
   for (int i = 0; i < T+2; i++) {
-    Dingsbums const* q = unprotected;
-    p = new Dingsbums(i);
+    DataToBeProtected const* q = unprotected;
+    p = new DataToBeProtected(i);
     unprotected = p;
     usleep(1000000);
     delete q;
@@ -215,9 +208,9 @@ void writer_unprotected () {
 }
 
 void writer_mutex () {
-  Dingsbums* p;
+  DataToBeProtected* p;
   for (int i = 0; i < T+2; i++) {
-    p = new Dingsbums(i);
+    p = new DataToBeProtected(i);
     {
       lock_guard<mutex> locker(mut);
       delete unprotected;
@@ -230,9 +223,9 @@ void writer_mutex () {
 }
 
 void writer_spinlock () {
-  Dingsbums* p;
+  DataToBeProtected* p;
   for (int i = 0; i < T+2; i++) {
-    p = new Dingsbums(i);
+    p = new DataToBeProtected(i);
     {
       spin.Acquire();
       delete unprotected;
@@ -261,34 +254,34 @@ int main (int argc, char* argv[]) {
       int N = atoi(argv[j]);
       cout << "Mode: " << modes[mode] << endl;
       cout << "Nr of threads: " << N << endl;
-      vector<thread> viele;
-      viele.reserve(N);
-      thread* nocheiner;
+      vector<thread> readerThreads;
+      readerThreads.reserve(N);
+      thread* writerThread;
 
       switch (mode) {
-        case 0: nocheiner = new thread(writer_good); break;
-        case 1: nocheiner = new thread(writer_unprotected); break;
-        case 2: nocheiner = new thread(writer_mutex); break;
-        case 3: nocheiner = new thread(writer_spinlock); break;
-        case 4: nocheiner = new thread(writer_protector); break;
+        case 0: writerThread = new thread(writer_guardian); break;
+        case 1: writerThread = new thread(writer_unprotected); break;
+        case 2: writerThread = new thread(writer_mutex); break;
+        case 3: writerThread = new thread(writer_spinlock); break;
+        case 4: writerThread = new thread(writer_protector); break;
       }
       
       usleep(500000);
       for (int i = 0; i < N; i++) {
         switch (mode) {
-          case 0: viele.emplace_back(reader_good, i); break;
-          case 1: viele.emplace_back(reader_unprotected, i); break;
-          case 2: viele.emplace_back(reader_mutex, i); break;
-          case 3: viele.emplace_back(reader_spinlock, i); break;
-          case 4: viele.emplace_back(reader_protector, i); break;
+          case 0: readerThreads.emplace_back(reader_guardian, i); break;
+          case 1: readerThreads.emplace_back(reader_unprotected, i); break;
+          case 2: readerThreads.emplace_back(reader_mutex, i); break;
+          case 3: readerThreads.emplace_back(reader_spinlock, i); break;
+          case 4: readerThreads.emplace_back(reader_protector, i); break;
         }
       }
-      nocheiner->join();
+      writerThread->join();
       for (int i = 0; i < N; i++) {
-        viele[i].join();
+        readerThreads[i].join();
       }
-      delete nocheiner;
-      nocheiner = nullptr;
+      delete writerThread;
+      writerThread = nullptr;
       cout << "Total: " << total/1000000.0/T << "M/s, per thread: "
                         << total/1000000.0/N/T << "M/(thread*s)" << endl;
       cout << "nullptr values seen: " << nullptrsSeen
