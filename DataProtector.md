@@ -129,7 +129,7 @@ of the `DataProtector` class, first `DataProtector.h`:
 
       public:
 
-        DataProtector () : _last(0) {
+        DataProtector () : _list(nullptr), _last(0) {
           _list = new Entry[Nr];
           // Just to be sure:
           for (size_t i = 0; i < Nr; i++) {
