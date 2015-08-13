@@ -20,7 +20,7 @@ probably not new, but which we still did not find anywhere else.
 Usage:
 
     make
-    ./DataGuardianTest 1 2 3 4 5 6 7 8
+    ./DataProtectorTest 1 2 3 4 5 6 7 8
 
 See the file `DataProtector.md` for more details about the code in this 
 repository.
