@@ -80,7 +80,7 @@ class DataProtector {
       int id = _mySlot;
       if (id < 0) {
         id = _last++;
-        if (_last > Nr) {
+        if (_last >= Nr) {
           _last = 0;
         }
         _mySlot = id;
