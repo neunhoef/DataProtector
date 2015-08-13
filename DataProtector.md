@@ -124,12 +124,12 @@ of the `DataProtector` class, first `DataProtector.h`:
 
         Entry* _list;
 
-        std::atomic<int> _last;
+        static std::atomic<int> _last;
         static thread_local int _mySlot;
 
       public:
 
-        DataProtector () : _list(nullptr), _last(0) {
+        DataProtector () : _list(nullptr) {
           _list = new Entry[Nr];
           // Just to be sure:
           for (size_t i = 0; i < Nr; i++) {
@@ -163,23 +163,29 @@ of the `DataProtector` class, first `DataProtector.h`:
 
         int getMyId () {
           int id = _mySlot;
-          if (id < 0) {
-            id = _last++;
-            if (_last > Nr) {
-              _last = 0;
-            }
-            _mySlot = id;
+          if (id >= 0) {
+            return id;
           }
-          return id;
+          while (true) {
+            int newId = _last + 1;
+            if (newId >= Nr) {
+              newId = 0;
+            }
+            if (_last.compare_exchange_strong(id, newId)) {
+              _mySlot = newId;
+              return newId;
+            }
+          }
         }
 
     };
 
-And a minuscule part in `DataProtector.cpp` for the definition of a
-static thread-local variable:
+And a minuscule part in `DataProtector.cpp` for the definition of two
+static variables, one of which is thread-local:
 
     #include "DataProtector.h"
     template<int Nr> thread_local int DataProtector<Nr>::_mySlot = -1;
+    template<int Nr> std::atomic<int> DataProtector<Nr>::_last(0);
     template class DataProtector<64>;
 
 In a multi-threaded application one would declare the following, either
