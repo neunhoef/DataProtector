@@ -6,26 +6,6 @@
 #include <vector>
 #include <time.h>
 
-#include <boost/atomic.hpp>
-
-class SpinLock {
-  public:
-    void Acquire() {
-      while (true) {
-        if (! m_locked.test_and_set(boost::memory_order_acquire)) {
-          return;
-        }
-        usleep(250);
-      }
-    }
-    void Release() {
-      m_locked.clear(boost::memory_order_release);
-    }
-
-  private:
-    boost::atomic_flag m_locked;
-};
-
 #define T 10
 #define maxN 64
 
@@ -49,12 +29,14 @@ atomic<DataToBeProtected*> pointerToData(nullptr);
 DataProtector<64> protector;
 
 mutex mut;
-SpinLock spin;
 
 uint64_t total = 0;
 
 atomic<uint64_t> nullptrsSeen;
 atomic<uint64_t> alarmsSeen;
+
+shared_ptr<DataToBeProtected> global_shared_ptr;
+thread_local shared_ptr<DataToBeProtected> thread_local_shared_ptr;
 
 void reader_guardian (int id) {
   uint64_t count = 0;
@@ -143,23 +125,24 @@ void reader_mutex (int) {
   total += count;
 }
 
-void reader_spinlock (int) {
+void reader_shared_ptr(int) {
   uint64_t count = 0;
   time_t start = time(nullptr);
   while (time(nullptr) < start + T) {
     for (int i = 0; i < 1000; i++) {
       count++;
-      spin.Acquire();
-      DataToBeProtected const* p = unprotected;
-      if (p == nullptr) {
+      atomic_thread_fence(memory_order_consume);
+      if (thread_local_shared_ptr != global_shared_ptr) {
+        thread_local_shared_ptr = atomic_load(&global_shared_ptr);
+      }
+      if (thread_local_shared_ptr == nullptr) {
         nullptrsSeen++;
       }
       else {
-        if (! p->isValid) {
+        if (! thread_local_shared_ptr->isValid) {
           alarmsSeen++;
         }
       }
-      spin.Release();
     }
   }
   lock_guard<mutex> locker(mut);
@@ -222,23 +205,14 @@ void writer_mutex () {
   unprotected = nullptr;
 }
 
-void writer_spinlock () {
-  DataToBeProtected* p;
+void writer_shared_ptr () {
   for (int i = 0; i < T+2; i++) {
-    p = new DataToBeProtected(i);
-    {
-      spin.Acquire();
-      delete unprotected;
-      unprotected = p;
-      spin.Release();
-    }
+    atomic_store(&global_shared_ptr, make_shared<DataToBeProtected>(i));
     usleep(1000000);
   }
-  delete unprotected;
-  unprotected = nullptr;
 }
 
-char const* modes[] = {"guardian", "unprotected", "std::mutex", "spinlock",
+char const* modes[] = {"guardian", "unprotected", "std::mutex", "std::shared_ptr",
                        "protector"};
 
 int main (int argc, char* argv[]) {
@@ -262,7 +236,7 @@ int main (int argc, char* argv[]) {
         case 0: writerThread = new thread(writer_guardian); break;
         case 1: writerThread = new thread(writer_unprotected); break;
         case 2: writerThread = new thread(writer_mutex); break;
-        case 3: writerThread = new thread(writer_spinlock); break;
+        case 3: writerThread = new thread(writer_shared_ptr); break;
         case 4: writerThread = new thread(writer_protector); break;
       }
       
@@ -272,7 +246,7 @@ int main (int argc, char* argv[]) {
           case 0: readerThreads.emplace_back(reader_guardian, i); break;
           case 1: readerThreads.emplace_back(reader_unprotected, i); break;
           case 2: readerThreads.emplace_back(reader_mutex, i); break;
-          case 3: readerThreads.emplace_back(reader_spinlock, i); break;
+          case 3: readerThreads.emplace_back(reader_shared_ptr, i); break;
           case 4: readerThreads.emplace_back(reader_protector, i); break;
         }
       }
